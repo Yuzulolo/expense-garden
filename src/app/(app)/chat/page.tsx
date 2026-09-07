@@ -1,7 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { askAboutSpending } from "./actions";
-import { ChatComposer } from "./chat-panel";
+import { ChatComposer, type Turn } from "./chat-panel";
+import { CHAT_MODEL, formatModelSlug } from "@/lib/ai/models";
 
 export default async function ChatPage() {
   // Gated here as well as in the layout: every entry point that reads user
@@ -10,11 +10,17 @@ export default async function ChatPage() {
 
   const supabase = await createClient();
 
-  // RLS scopes this to the signed-in user's own conversation.
+  // The database is the source of truth for the transcript. RLS scopes this to
+  // the signed-in user's own conversation. The client component seeds its state
+  // from this on mount and appends locally afterwards, so a completed answer
+  // never has to round-trip back from the server to stay on screen.
+  // Newest 200, not oldest 200: `ascending: true` with a limit would return the
+  // start of a long conversation and hide everything recent. The index is
+  // (user_id, created_at desc), so this is also the ordering it serves directly.
   const { data, error } = await supabase
     .from("messages")
-    .select("id, role, content, created_at")
-    .order("created_at", { ascending: true })
+    .select("id, role, content")
+    .order("created_at", { ascending: false })
     .limit(200);
 
   if (error) {
@@ -32,7 +38,17 @@ export default async function ChatPage() {
     );
   }
 
-  const messages = data ?? [];
+  // Back to chronological before handing over: the client groups turns into
+  // question/answer pairs, which only works in write order. It reverses the
+  // grouped exchanges itself for newest-first display.
+  const initialTurns: Turn[] = (data ?? [])
+    .slice()
+    .reverse()
+    .map((m) => ({
+      id: m.id as string,
+      role: m.role as string,
+      content: m.content as string,
+    }));
 
   return (
     <section className="flex max-w-2xl flex-col gap-4">
@@ -44,36 +60,11 @@ export default async function ChatPage() {
         </p>
       </div>
 
-      {messages.length === 0 ? (
-        <div className="flex flex-col gap-2 border border-dashed p-4 text-sm text-zinc-500">
-          <p>Nothing asked yet. Try one of these:</p>
-          <ul className="list-disc pl-5">
-            <li>How much did I spend on social last month?</li>
-            <li>Which category did I spend the most on this year?</li>
-            <li>Am I spending more than I earn?</li>
-          </ul>
-        </div>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {messages.map((m) => (
-            <li
-              key={m.id as string}
-              className={
-                m.role === "user"
-                  ? "border-l-2 border-emerald-800 pl-3"
-                  : "border-l-2 border-zinc-300 pl-3 dark:border-zinc-700"
-              }
-            >
-              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                {m.role === "user" ? "You" : "Answer"}
-              </p>
-              <p className="whitespace-pre-wrap text-sm">{m.content as string}</p>
-            </li>
-          ))}
-        </ol>
-      )}
-
-      <ChatComposer action={askAboutSpending} />
+      <ChatComposer
+        initialTurns={initialTurns}
+        modelLabel={formatModelSlug(CHAT_MODEL)}
+        modelSlug={CHAT_MODEL}
+      />
     </section>
   );
 }

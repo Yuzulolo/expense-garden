@@ -12,8 +12,12 @@ import type { ActionState } from "./actions";
  */
 export function LogExpense({
   action,
+  modelLabel,
+  modelSlug,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  modelLabel: string;
+  modelSlug: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     action,
@@ -53,6 +57,7 @@ export function LogExpense({
         </div>
         <p className="text-xs text-zinc-500">
           Plain English. Try “65 climbing pass yesterday” or “24.99 haircut”.
+          <span title={modelSlug}> Read by {modelLabel}.</span>
         </p>
       </form>
 

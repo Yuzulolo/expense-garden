@@ -1,109 +1,29 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { addMonths, currentMonthFor, todayFor } from "@/lib/month";
 import { formatCents } from "@/lib/money";
 
 /**
- * Chat over the user's own spending.
+ * Grounding for the chat feature: the DATA block and the replayed history.
  *
- * THE OPENROUTER CALL HAPPENS IN THIS FILE AND NOWHERE ELSE (for this feature).
- * `process.env.OPENROUTER_API_KEY` is read only inside callOpenRouter() below.
- * This file carries "use server" on line 1, so none of it is bundled for the
- * browser; the client component receives only an action reference.
+ * Extracted from the old server action so the streaming Route Handler and any
+ * future caller build the same context from the same code. Holds no secret and
+ * makes no model call — it only reads the user's own aggregates.
  *
- * Grounding: every figure in an answer comes from the three security_invoker
- * views, read as the signed-in user. RLS scopes them, so the numbers in the
- * prompt are that user's and no one else's — there is no user_id in any query
- * here, and none is passed to the model.
+ * Server-only by usage: imported exclusively by the Route Handler. It is never
+ * imported by a client component, and nothing here would be useful there.
  */
 
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Sonnet 5 is the better fit for arithmetic over supplied numbers, but this
-// OpenRouter workspace's guardrail blocks every Sonnet and Opus endpoint
-// ("model-ignored-by-guardrail", HTTP 404 at the "Filter by Guardrails" routing
-// step). Haiku 4.5 is the only Anthropic model the account can reach, so the
-// system prompt compensates by requiring the figures used to be shown.
-// The guardrail belongs to the school's workspace (the key is school-issued),
-// so it is institutional policy, not a local setting - the configure_url in the
-// 404 points at the viewer's own workspace and is misleading. If the allowlist
-// ever admits Sonnet 5, change this back to "anthropic/claude-sonnet-5".
-// Allowed alternatives today: google/gemini-2.5-flash, openai/gpt-5-mini.
-const CHAT_MODEL = "anthropic/claude-haiku-4.5";
-
 /** How much history to replay, so follow-ups resolve without unbounded cost. */
-const HISTORY_TURNS = 10;
+export const HISTORY_TURNS = 10;
 /** Grounding window. Twelve months covers "this year" and year-on-year asks. */
-const WINDOW_MONTHS = 12;
+export const WINDOW_MONTHS = 12;
 
-export type ChatState = { error?: string };
+export type ChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
 
-type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
-
-async function callOpenRouter(
-  messages: ChatMessage[],
-): Promise<{ reply: string } | { error: string }> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return { error: "Chat is not configured on this server." };
-
-  let response: Response;
-  try {
-    response = await fetch(OPENROUTER_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: CHAT_MODEL,
-        // Pinned for the reason the parser taught us: OpenRouter will otherwise
-        // route to an endpoint that advertises support for our parameters and
-        // then quietly behaves differently.
-        provider: { only: ["anthropic"] },
-        max_tokens: 700,
-        messages,
-      }),
-    });
-  } catch {
-    return { error: "Could not reach the AI service. Try again in a moment." };
-  }
-
-  // Read as text first: response.json() throws on a non-JSON body and takes the
-  // body with it, leaving nothing to report.
-  const rawBody = await response.text();
-
-  if (!response.ok) {
-    return {
-      error: `The AI service returned an error (${response.status}). Try again in a moment.`,
-    };
-  }
-
-  let envelope: {
-    choices?: { message?: { content?: unknown } }[];
-    error?: unknown;
-  };
-  try {
-    envelope = JSON.parse(rawBody);
-  } catch {
-    return { error: "The AI service sent an unreadable response." };
-  }
-
-  // OpenRouter can return an error object inside a 200 response.
-  if (envelope.error) {
-    return { error: "The AI service reported an error. Try again in a moment." };
-  }
-
-  const content = envelope.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || content.trim() === "") {
-    return { error: "The AI service sent an empty response." };
-  }
-
-  return { reply: content.trim() };
-}
-
-const SYSTEM_PROMPT = `You answer questions about one person's own spending and income.
+export const SYSTEM_PROMPT = `You answer questions about one person's own spending and income.
 
 Rules, in order of importance:
 1. Use ONLY the figures in the DATA block. Never invent, estimate, extrapolate, or recall a number from anywhere else.
@@ -165,31 +85,29 @@ function buildDataBlock(
   return lines.join("\n");
 }
 
-export async function askAboutSpending(
-  _prev: ChatState,
-  formData: FormData,
-): Promise<ChatState> {
-  await requireUser();
-
-  const question = String(formData.get("question") ?? "").trim();
-  if (!question) return { error: "Type a question first." };
-  if (question.length > 1000) {
-    return { error: "That question is too long. Shorten it." };
-  }
-
-  const supabase = await createClient();
-
+/**
+ * Reads the three security_invoker views plus the category list and recent
+ * history, and assembles the message array for the model.
+ *
+ * There is no `.eq('user_id', ...)` in any query here. RLS supplies that
+ * predicate inside the views, so the numbers are the caller's own and no
+ * user id is ever passed to the model.
+ */
+export async function buildChatMessages(
+  supabase: SupabaseClient,
+  question: string,
+): Promise<{ messages: ChatMessage[] } | { error: string }> {
   const { data: profile } = await supabase
     .from("profiles")
     .select("timezone")
     .maybeSingle();
 
   const today = todayFor(profile?.timezone);
-  const windowStart = addMonths(currentMonthFor(profile?.timezone), -(WINDOW_MONTHS - 1));
+  const windowStart = addMonths(
+    currentMonthFor(profile?.timezone),
+    -(WINDOW_MONTHS - 1),
+  );
 
-  // Four reads, all aggregated in Postgres, all scoped by RLS. No .eq on
-  // user_id anywhere: the views are security_invoker, so the filter is the
-  // policy, not a predicate the client could influence.
   const [
     { data: incomeRows, error: incomeError },
     { data: expenseRows, error: expenseError },
@@ -245,7 +163,10 @@ export async function askAboutSpending(
     const month = r.month as string;
     const slug = r.category_slug as string;
     const list = byCategory.get(month) ?? [];
-    list.push({ label: labelFor.get(slug) ?? slug, cents: Number(r.total_cents) });
+    list.push({
+      label: labelFor.get(slug) ?? slug,
+      cents: Number(r.total_cents),
+    });
     byCategory.set(month, list);
   }
 
@@ -267,28 +188,16 @@ export async function askAboutSpending(
     .slice()
     .reverse()
     .map((m) => ({
-      role: m.role === "assistant" ? "assistant" : "user",
+      role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
       content: m.content as string,
     }));
 
-  const result = await callOpenRouter([
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "system", content: `DATA\n${dataBlock}` },
-    ...priorTurns,
-    { role: "user", content: question },
-  ]);
-
-  if ("error" in result) return result;
-
-  // Both rows written together, only after a successful reply — so history
-  // never holds a question with no answer. The table is append-only, so an
-  // orphan could not be cleaned up later.
-  const { error: insertError } = await supabase.from("messages").insert([
-    { role: "user", content: question },
-    { role: "assistant", content: result.reply },
-  ]);
-  if (insertError) return { error: insertError.message };
-
-  revalidatePath("/chat");
-  return {};
+  return {
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: `DATA\n${dataBlock}` },
+      ...priorTurns,
+      { role: "user", content: question },
+    ],
+  };
 }

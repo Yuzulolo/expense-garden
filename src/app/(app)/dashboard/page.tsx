@@ -6,6 +6,7 @@ import { formatCents } from "@/lib/money";
 import { Garden, type Plant } from "./garden";
 import { logExpenseFromText } from "../expenses/ai-actions";
 import { LogExpense } from "../expenses/log-expense";
+import { PARSE_MODEL, formatModelSlug } from "@/lib/ai/models";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -92,7 +93,11 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <LogExpense action={logExpenseFromText} />
+      <LogExpense
+        action={logExpenseFromText}
+        modelLabel={formatModelSlug(PARSE_MODEL)}
+        modelSlug={PARSE_MODEL}
+      />
 
       {plants.length === 0 ? (
         <p className="text-sm text-zinc-500">

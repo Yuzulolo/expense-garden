@@ -4,6 +4,7 @@ import { formatCents } from "@/lib/money";
 import { createExpense, updateExpense, deleteExpense } from "./actions";
 import { logExpenseFromText } from "./ai-actions";
 import { LogExpense } from "./log-expense";
+import { PARSE_MODEL, formatModelSlug } from "@/lib/ai/models";
 import {
   AddExpenseForm,
   ExpenseRow,
@@ -59,7 +60,11 @@ export default async function ExpensesPage() {
     <section className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Expenses</h1>
 
-      <LogExpense action={logExpenseFromText} />
+      <LogExpense
+        action={logExpenseFromText}
+        modelLabel={formatModelSlug(PARSE_MODEL)}
+        modelSlug={PARSE_MODEL}
+      />
 
       <details className="border-t pt-4">
         <summary className="cursor-pointer text-sm text-zinc-500">

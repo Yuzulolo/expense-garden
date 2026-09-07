@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { todayFor } from "@/lib/month";
 import { MAX_AMOUNT_CENTS } from "@/lib/money";
 import { createExpense, type ActionState } from "./actions";
+import { PARSE_MODEL } from "@/lib/ai/models";
 
 /**
  * Natural-language expense logging — the app's primary input method.
@@ -23,7 +24,6 @@ import { createExpense, type ActionState } from "./actions";
  */
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const PARSE_MODEL = "anthropic/claude-haiku-4.5";
 
 type ParsedExpense = {
   amount: number | null;

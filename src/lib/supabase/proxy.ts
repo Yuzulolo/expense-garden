@@ -66,6 +66,11 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!user && !isPublic(pathname)) {
+    // API routes must answer with a status code, never a redirect: fetch()
+    // follows a 307 transparently and hands the caller a /login HTML page with
+    // status 200, which then fails to parse as JSON. Each route handler does
+    // its own auth check and returns 401 itself.
+    if (pathname.startsWith("/api/")) return response;
     return redirectPreservingCookies(request, response, "/login");
   }
 
