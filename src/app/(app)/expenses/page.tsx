@@ -2,6 +2,8 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { formatCents } from "@/lib/money";
 import { createExpense, updateExpense, deleteExpense } from "./actions";
+import { logExpenseFromText } from "./ai-actions";
+import { LogExpense } from "./log-expense";
 import {
   AddExpenseForm,
   ExpenseRow,
@@ -57,7 +59,20 @@ export default async function ExpensesPage() {
     <section className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Expenses</h1>
 
-      <AddExpenseForm categories={cats} action={createExpense} today={today} />
+      <LogExpense action={logExpenseFromText} />
+
+      <details className="border-t pt-4">
+        <summary className="cursor-pointer text-sm text-zinc-500">
+          or enter manually
+        </summary>
+        <div className="pt-3">
+          <AddExpenseForm
+            categories={cats}
+            action={createExpense}
+            today={today}
+          />
+        </div>
+      </details>
 
       <p className="text-sm text-zinc-500">
         {rows.length} {rows.length === 1 ? "entry" : "entries"} · total{" "}

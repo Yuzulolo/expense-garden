@@ -29,6 +29,9 @@ export default async function AppLayout({
           <Link href="/income" className="text-sm underline">
             Income
           </Link>
+          <Link href="/chat" className="text-sm underline">
+            Ask
+          </Link>
         </nav>
         <div className="flex items-center gap-4">
           <span className="text-sm text-zinc-500">{user.email}</span>

@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { currentMonthFor, monthLabel } from "@/lib/month";
 import { formatCents } from "@/lib/money";
 import { Garden, type Plant } from "./garden";
+import { logExpenseFromText } from "../expenses/ai-actions";
+import { LogExpense } from "../expenses/log-expense";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -89,6 +91,8 @@ export default async function DashboardPage() {
           to water one.
         </p>
       </div>
+
+      <LogExpense action={logExpenseFromText} />
 
       {plants.length === 0 ? (
         <p className="text-sm text-zinc-500">

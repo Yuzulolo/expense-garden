@@ -30,20 +30,39 @@ export function nextMonth(monthStart: string): string {
  * user's stored IANA zone, falling back to UTC for an unset or invalid one.
  */
 export function currentMonthFor(timezone: string | null | undefined): string {
+  return startOfMonth(todayFor(timezone));
+}
+
+/**
+ * Today's calendar date in the user's zone, as YYYY-MM-DD.
+ *
+ * Same rule as currentMonthFor: computed on the server from the stored IANA
+ * zone, never from the browser clock.
+ */
+export function todayFor(timezone: string | null | undefined): string {
   const zone = timezone || "UTC";
   try {
     // en-CA formats as YYYY-MM-DD, which is exactly what we need.
-    const today = new Intl.DateTimeFormat("en-CA", {
+    return new Intl.DateTimeFormat("en-CA", {
       timeZone: zone,
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
     }).format(new Date());
-    return startOfMonth(today);
   } catch {
     // Intl throws RangeError on an unknown zone rather than falling back.
-    return startOfMonth(new Date().toISOString().slice(0, 10));
+    return new Date().toISOString().slice(0, 10);
   }
+}
+
+/** Shift a first-of-month date by whole months (negative goes back). */
+export function addMonths(monthStart: string, delta: number): string {
+  const year = Number(monthStart.slice(0, 4));
+  const month = Number(monthStart.slice(5, 7));
+  const zeroBased = year * 12 + (month - 1) + delta;
+  const y = Math.floor(zeroBased / 12);
+  const m = (zeroBased % 12) + 1;
+  return `${y}-${String(m).padStart(2, "0")}-01`;
 }
 
 /** "2026-09-01" -> "September 2026", for display only. */
