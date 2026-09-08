@@ -39,11 +39,14 @@ export default async function ExpensesPage() {
   if (error) {
     return (
       <section className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold">Expenses</h1>
-        <p role="alert" className="text-red-700">
+        <h1 className="font-display text-3xl font-semibold">Expenses</h1>
+        <p
+          role="alert"
+          className="border-l-2 border-danger pl-3 text-sm text-danger"
+        >
           Could not load expenses: {error.message}
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-ink-soft">
           If this says a relation does not exist, the migrations have not been
           pushed yet.
         </p>
@@ -57,8 +60,19 @@ export default async function ExpensesPage() {
   const total = rows.reduce((sum, e) => sum + e.amount_cents, 0);
 
   return (
-    <section className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Expenses</h1>
+    <section className="flex flex-col gap-7">
+      <header className="flex flex-col gap-1.5">
+        <h1 className="font-display text-[2.125rem] leading-[1.1] font-semibold text-ink">
+          Expenses
+        </h1>
+        <p className="text-sm text-ink-soft">
+          {rows.length === 0
+            ? "Every expense you log will appear here, oldest at the bottom."
+            : `${rows.length} ${
+                rows.length === 1 ? "entry" : "entries"
+              }, totalling ${formatCents(total)} all time.`}
+        </p>
+      </header>
 
       <LogExpense
         action={logExpenseFromText}
@@ -66,11 +80,18 @@ export default async function ExpensesPage() {
         modelSlug={PARSE_MODEL}
       />
 
-      <details className="border-t pt-4">
-        <summary className="cursor-pointer text-sm text-zinc-500">
-          or enter manually
+      <details className="group border-t border-rule pt-4">
+        <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-sm text-sm text-ink-soft transition-colors hover:text-ink">
+          <svg
+            viewBox="0 0 12 12"
+            aria-hidden="true"
+            className="h-2.5 w-2.5 transition-transform group-open:rotate-90"
+          >
+            <path d="M3 1L9 6L3 11Z" fill="currentColor" />
+          </svg>
+          Type it into a form instead
         </summary>
-        <div className="pt-3">
+        <div className="pt-4">
           <AddExpenseForm
             categories={cats}
             action={createExpense}
@@ -79,15 +100,13 @@ export default async function ExpensesPage() {
         </div>
       </details>
 
-      <p className="text-sm text-zinc-500">
-        {rows.length} {rows.length === 1 ? "entry" : "entries"} · total{" "}
-        {formatCents(total)}
-      </p>
-
       {rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">No expenses yet.</p>
+        <p className="rounded-lg border border-dashed border-rule px-4 py-6 text-sm text-ink-soft">
+          Nothing logged yet. Say what you spent above — “spent 12 on coffee”
+          is enough.
+        </p>
       ) : (
-        <ul className="flex flex-col">
+        <ul className="flex flex-col border-t border-rule">
           {rows.map((expense) => (
             <ExpenseRow
               key={expense.id}

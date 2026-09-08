@@ -52,7 +52,13 @@ function toExchanges(turns: Turn[]): Exchange[] {
 }
 
 /** One rendered turn. Used for both persisted and in-flight turns, so the
- *  handoff between them changes nothing in the DOM. */
+ *  handoff between them changes nothing in the DOM.
+ *
+ *  The two roles are told apart by treatment, not by a label above each one:
+ *  the question is set in the display face, the answer sits on the water tint
+ *  the AI surfaces share. A visible "YOU" / "ANSWER" caption is chrome that
+ *  repeats what the styling already says, so only a screen-reader label
+ *  remains. */
 function TurnView({
   role,
   content,
@@ -63,20 +69,26 @@ function TurnView({
   caret?: boolean;
 }) {
   const isUser = role === "user";
-  return (
-    <div
-      className={
-        isUser
-          ? "border-l-2 border-emerald-800 pl-3"
-          : "border-l-2 border-zinc-300 pl-3 dark:border-zinc-700"
-      }
-    >
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        {isUser ? "You" : "Answer"}
-      </p>
-      <p className="whitespace-pre-wrap text-sm">
+
+  if (isUser) {
+    return (
+      <p className="font-display text-[1.0625rem] leading-snug font-semibold text-ink">
+        <span className="sr-only">You asked: </span>
         {content}
-        {caret ? <span className="ml-0.5 inline-block animate-pulse">▍</span> : null}
+      </p>
+    );
+  }
+
+  return (
+    <div className="rounded-md border-l-2 border-water bg-water-wash px-3 py-2.5">
+      <p className="whitespace-pre-wrap text-sm text-ink">
+        <span className="sr-only">Answer: </span>
+        {content}
+        {caret ? (
+          <span className="ml-0.5 inline-block animate-pulse text-water">
+            ▍
+          </span>
+        ) : null}
       </p>
     </div>
   );
@@ -93,7 +105,7 @@ function ExchangeView({
   caret?: boolean;
 }) {
   return (
-    <li className="flex flex-col gap-2 border-b pb-3 last:border-b-0">
+    <li className="flex flex-col gap-2 border-b border-rule-soft pb-4 last:border-b-0 last:pb-0">
       {question ? <TurnView role="user" content={question.content} /> : null}
       {answer || caret ? (
         <TurnView role="assistant" content={answer?.content ?? ""} caret={caret} />
@@ -101,6 +113,12 @@ function ExchangeView({
     </li>
   );
 }
+
+const EXAMPLES = [
+  "How much did I spend on social last month?",
+  "Which category did I spend the most on this year?",
+  "Am I spending more than I earn?",
+];
 
 export function ChatComposer({
   initialTurns,
@@ -215,11 +233,19 @@ export function ChatComposer({
   // question still directly above its own answer.
   const exchanges = toExchanges(turns).reverse();
 
+  function fillExample(text: string) {
+    // Presentation only: it fills the box and hands over the cursor, it does
+    // not ask anything.
+    if (!inputRef.current) return;
+    inputRef.current.value = text;
+    inputRef.current.focus();
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* The composer sits at the top so it stays reachable as the transcript
           grows, rather than being pushed below it. */}
-      <form onSubmit={ask} className="flex flex-wrap gap-2">
+      <form onSubmit={ask} className="flex flex-wrap items-stretch gap-2">
         <label htmlFor="question" className="sr-only">
           Ask about your spending
         </label>
@@ -232,39 +258,55 @@ export function ChatComposer({
           autoComplete="off"
           required
           disabled={pending}
-          className="min-w-64 flex-1 border px-3 py-2 disabled:opacity-60"
+          className="min-w-64 flex-1 rounded-md border border-rule bg-surface px-3 py-2.5 text-[0.9375rem] text-ink placeholder:text-ink-faint focus:border-water focus:outline-none focus-visible:outline-none disabled:opacity-55"
         />
         <button
           type="submit"
           disabled={pending}
-          className="border bg-emerald-800 px-4 py-2 font-medium text-white disabled:opacity-60"
+          className="rounded-md bg-primary px-5 py-2.5 font-medium text-on-primary transition-colors hover:bg-primary-hover disabled:opacity-55"
         >
           {pending ? "Thinking…" : "Ask"}
         </button>
       </form>
 
       {error ? (
-        <p role="alert" className="text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-md border-l-2 border-danger bg-surface px-3 py-2 text-sm text-danger"
+        >
           {error}
         </p>
       ) : null}
 
-      <p className="text-xs text-zinc-500">
-        Answers come from your own recorded totals for the last 12 months ·{" "}
-        <span title={modelSlug}>Powered by {modelLabel}</span>
+      <p className="text-xs text-ink-soft">
+        Answered from your own recorded totals for the last 12 months by{" "}
+        <span className="text-water-ink" title={modelSlug}>
+          {modelLabel}
+        </span>
+        . It shows the figures it used, so you can check them.
       </p>
 
       {exchanges.length === 0 && !showInFlight ? (
-        <div className="flex flex-col gap-2 border border-dashed p-4 text-sm text-zinc-500">
-          <p>Nothing asked yet. Try one of these:</p>
-          <ul className="list-disc pl-5">
-            <li>How much did I spend on social last month?</li>
-            <li>Which category did I spend the most on this year?</li>
-            <li>Am I spending more than I earn?</li>
+        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-rule px-4 py-5">
+          <p className="text-sm text-ink-soft">
+            Nothing asked yet. Start with one of these:
+          </p>
+          <ul className="flex flex-col items-start gap-1.5">
+            {EXAMPLES.map((example) => (
+              <li key={example}>
+                <button
+                  type="button"
+                  onClick={() => fillExample(example)}
+                  className="rounded-md text-left font-display text-[1.0625rem] leading-snug font-semibold text-ink-soft transition-colors hover:text-water-ink"
+                >
+                  {example}
+                </button>
+              </li>
+            ))}
           </ul>
         </div>
       ) : (
-        <ol className="flex flex-col gap-3" aria-live="polite">
+        <ol className="flex flex-col gap-4" aria-live="polite">
           {/* The in-flight exchange is the newest, so it sits directly under
               the composer — and it is rendered by the same ExchangeView the
               saved turns use, so the handoff at stream end changes nothing. */}

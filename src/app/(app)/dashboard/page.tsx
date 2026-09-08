@@ -49,8 +49,11 @@ export default async function DashboardPage() {
   if (error) {
     return (
       <section className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold">Garden</h1>
-        <p role="alert" className="text-red-700">
+        <h1 className="font-display text-3xl font-semibold">Garden</h1>
+        <p
+          role="alert"
+          className="border-l-2 border-danger pl-3 text-sm text-danger"
+        >
           Could not load the garden: {error.message}
         </p>
       </section>
@@ -79,33 +82,58 @@ export default async function DashboardPage() {
 
   const monthTotal = plants.reduce((sum, p) => sum + p.totalCents, 0);
 
-  return (
-    <section className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Garden · {monthLabel(month)}</h1>
-        <p className="text-sm text-zinc-500">
-          {formatCents(monthTotal)} spent this month across {plants.length}{" "}
-          categories. Plants renew each month.{" "}
-          <Link href="/expenses" className="underline">
-            Add an expense
-          </Link>{" "}
-          to water one.
-        </p>
-      </div>
+  const planted = plants.filter((p) => p.totalCents > 0).length;
 
-      <LogExpense
-        action={logExpenseFromText}
-        modelLabel={formatModelSlug(PARSE_MODEL)}
-        modelSlug={PARSE_MODEL}
-      />
+  return (
+    <section className="flex flex-col gap-7">
+      {/* The bed is the hero — it is the most characteristic thing this app
+          has, so it is what you land on, not a summary panel above it. */}
+      <header className="flex flex-col gap-1.5">
+        <h1 className="font-display text-[2.125rem] leading-[1.1] font-semibold text-ink sm:text-[2.5rem]">
+          {monthLabel(month)}
+        </h1>
+        <p className="max-w-[64ch] text-sm text-ink-soft">
+          {planted === 0 ? (
+            <>
+              Nothing planted yet. Say what you spent and the bed starts
+              filling in.
+            </>
+          ) : (
+            <>
+              <span className="tnum text-ink">{formatCents(monthTotal)}</span>{" "}
+              spent so far, growing {planted} of {plants.length} plants. The bed
+              goes back to seed when the month turns.
+            </>
+          )}
+        </p>
+      </header>
 
       {plants.length === 0 ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-ink-soft">
           No active categories — check the categories table.
         </p>
       ) : (
         <Garden plants={plants} />
       )}
+
+      {/* Directly under the bed: you type here, the ground above responds. */}
+      <div className="border-t border-rule pt-6">
+        <LogExpense
+          action={logExpenseFromText}
+          modelLabel={formatModelSlug(PARSE_MODEL)}
+          modelSlug={PARSE_MODEL}
+        />
+        <p className="mt-3 text-xs text-ink-faint">
+          Prefer a form?{" "}
+          <Link
+            href="/expenses"
+            className="text-ink-soft underline decoration-rule underline-offset-2 hover:text-ink"
+          >
+            Every entry is on the expenses page
+          </Link>
+          , where you can edit or delete one.
+        </p>
+      </div>
     </section>
   );
 }

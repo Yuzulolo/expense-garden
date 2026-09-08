@@ -31,11 +31,16 @@ export default async function ChatPage() {
   if (error) {
     return (
       <section className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold">Ask about your spending</h1>
-        <p role="alert" className="text-red-700">
+        <h1 className="font-display text-3xl font-semibold">
+          Ask about your spending
+        </h1>
+        <p
+          role="alert"
+          className="border-l-2 border-danger pl-3 text-sm text-danger"
+        >
           Could not load the conversation: {error.message}
         </p>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-ink-soft">
           If this says a relation does not exist, the messages migration has not
           been pushed yet.
         </p>
@@ -56,14 +61,16 @@ export default async function ChatPage() {
     }));
 
   return (
-    <section className="flex max-w-2xl flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold">Ask about your spending</h1>
-        <p className="text-sm text-zinc-500">
-          Questions are answered from your recorded totals — not from anything
-          the model was trained on.
+    <section className="flex max-w-2xl flex-col gap-6">
+      <header className="flex flex-col gap-1.5">
+        <h1 className="font-display text-[2.125rem] leading-[1.1] font-semibold text-ink">
+          Ask about your spending
+        </h1>
+        <p className="max-w-[62ch] text-sm text-ink-soft">
+          Answers come from the totals in your own garden, never from anything
+          the model was trained on. Newest question stays at the top.
         </p>
-      </div>
+      </header>
 
       <ChatComposer
         initialTurns={initialTurns}

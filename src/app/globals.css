@@ -1,26 +1,278 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Expense Garden — visual tokens.
+ *
+ * The palette is the cool side of botany: a plant-press blotter ground, pine
+ * ink, and soil brown used ONLY for soil. There is deliberately no single
+ * brand accent — the six plant hues below are the palette, so the app's colour
+ * comes from the user's own data.
+ *
+ * One semantic exception: water. The AI is what waters the garden, so the
+ * water hue marks the AI surfaces (the sentence composer, chat answers) and
+ * the watering moment. Nothing else uses it.
+ */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --bg: #eff2ec;
+  --air: #f5f7f2;
+  --surface: #fcfdfb;
+  --ink: #17251d;
+  --ink-soft: #47574d;
+  --ink-faint: #5e6d64;
+  --rule: #d3dbcf;
+  --rule-soft: #e3e9e0;
+
+  --soil: #6e5647;
+  --soil-deep: #574235;
+
+  --water: #2f7a8c;
+  --water-ink: #256676;
+  --water-wash: #dceaee;
+
+  --primary: #21402f;
+  --primary-hover: #2c5340;
+  --on-primary: #f4f8f4;
+
+  --danger: #9b2c2c;
+  --ok: #2f6b45;
+
+  /* Foliage and the bloom/fruit accent for each plant_key in categories. */
+  --vine: #3e7a34;
+  --vine-accent: #6fa83c;
+  --orchid: #4e7a5e;
+  --orchid-accent: #b93d82;
+  --bamboo: #7fa22e;
+  --bamboo-accent: #a8bf4a;
+  --tomato: #35703f;
+  --tomato-accent: #c7402c;
+  --fern: #2c7360;
+  --fern-accent: #4fa189;
+  --succulent: #7e9c86;
+  --succulent-accent: #c08ba8;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0f1512;
+    --air: #141b17;
+    --surface: #16201b;
+    --ink: #e7efe8;
+    --ink-soft: #9dafa3;
+    --ink-faint: #78877e;
+    --rule: #2a3830;
+    --rule-soft: #1f2a24;
+
+    --soil: #4a3a2f;
+    --soil-deep: #362a22;
+
+    --water: #5fb4c6;
+    --water-ink: #7cc6d6;
+    --water-wash: #16323a;
+
+    --primary: #2f6b4c;
+    --primary-hover: #3b8460;
+    --on-primary: #f0f7f1;
+
+    --danger: #f08a8a;
+    --ok: #7fc79c;
+
+    /* Foliage lifts a little at night so plants stay luminous on the dark bed. */
+    --vine: #57a247;
+    --vine-accent: #8ac653;
+    --orchid: #639773;
+    --orchid-accent: #d95a9e;
+    --bamboo: #9cc043;
+    --bamboo-accent: #c1d968;
+    --tomato: #46914f;
+    --tomato-accent: #e35a43;
+    --fern: #3d9680;
+    --fern-accent: #6cc0a7;
+    --succulent: #9ab8a2;
+    --succulent-accent: #d7a3bd;
   }
 }
 
+@theme inline {
+  --color-bg: var(--bg);
+  --color-air: var(--air);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-soft: var(--rule-soft);
+  --color-soil: var(--soil);
+  --color-soil-deep: var(--soil-deep);
+  --color-water: var(--water);
+  --color-water-ink: var(--water-ink);
+  --color-water-wash: var(--water-wash);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fraunces carries the personality: low optical size and a nudge of its SOFT
+   and WONK axes make it read hand-grown rather than editorial. */
+.font-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: "SOFT" 40, "WONK" 1;
+  letter-spacing: -0.011em;
+}
+
+/* Figures line up in every column that holds money. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--water);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: var(--water-wash);
+  color: var(--ink);
+}
+
+/* ---- The watering moment -------------------------------------------------
+ * The one place this app animates without being asked mid-gesture: an expense
+ * has just landed, and the plant it belongs to is watered. Everything here is
+ * triggered by a change in the totals the server sent, and all of it is
+ * suppressed under prefers-reduced-motion.
+ */
+
+@keyframes drop-fall {
+  0% {
+    transform: translateY(-14px) scaleY(0.6);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.95;
+  }
+  78% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(var(--fall, 60px)) scaleY(1.25);
+    opacity: 0;
+  }
+}
+
+/* Rooted at the soil line, so the plant pushes UP out of the ground. */
+@keyframes grow-spring {
+  0% {
+    transform: scaleY(0.9) scaleX(1.03);
+  }
+  45% {
+    transform: scaleY(1.055) scaleX(0.985);
+  }
+  75% {
+    transform: scaleY(0.985) scaleX(1.005);
+  }
+  100% {
+    transform: scaleY(1) scaleX(1);
+  }
+}
+
+@keyframes soil-soak {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.85;
+  }
+}
+
+/* A newly earned leaf, bloom or fruit arrives instead of popping into place. */
+@keyframes unfurl {
+  0% {
+    transform: scale(0.2) rotate(-8deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.06) rotate(1deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.drop {
+  animation: drop-fall 900ms cubic-bezier(0.45, 0, 0.7, 1) forwards;
+}
+.watered-plant {
+  animation: grow-spring 1100ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms both;
+  transform-origin: 50% 100%;
+}
+.soil-soak {
+  animation: soil-soak 1500ms ease-out forwards;
+}
+.unfurl {
+  animation: unfurl 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drop,
+  .watered-plant,
+  .soil-soak,
+  .unfurl {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---- The bed -------------------------------------------------------------
+ * The soil is painted as one continuous band behind the whole plant row rather
+ * than as a slice per column: six adjacent slices show subpixel seams at most
+ * flex widths, and the bed has to read as one piece of ground.
+ * The stops match the plant-area and soil heights in garden.tsx.
+ */
+.bed-soil {
+  background: linear-gradient(
+    to bottom,
+    transparent 0 186px,
+    var(--soil-deep) 186px 189px,
+    var(--soil) 189px 206px,
+    var(--soil-deep) 222px,
+    transparent 222px
+  );
+}
+
+@media (min-width: 640px) {
+  .bed-soil {
+    background: linear-gradient(
+      to bottom,
+      transparent 0 236px,
+      var(--soil-deep) 236px 240px,
+      var(--soil) 240px 262px,
+      var(--soil-deep) 284px,
+      transparent 284px
+    );
+  }
 }
