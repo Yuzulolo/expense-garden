@@ -236,5 +236,6 @@ Three, each on its own branch and PR.
 - `supabase.auth.getUser()`, never `getSession()`, wherever a decision depends on identity:
   `getSession` decodes the cookie without contacting the auth server, so a forged cookie can
   produce a session-shaped object.
-- The two-account RLS test lives in `supabase/tests/rls.sql`.
+- The two-account RLS test lives in `supabase/tests/rls.sql`, and the same test
+  for the AI conversation history in `supabase/tests/rls_messages.sql`.
 - No `service_role` key exists in this project, and an LLM feature is not a reason to add one.

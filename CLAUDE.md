@@ -159,3 +159,5 @@ the hosted project should carry that schema.
 - `docs/ARCHITECTURE.md` — schema, RLS policies, folder structure, ranked risks
 - `docs/openrouter-reference.md` — endpoint, headers, structured outputs, model slugs
 - `supabase/tests/rls.sql` — the two-account RLS test
+- `supabase/tests/rls_messages.sql` — the two-account test for `messages`, the
+  AI conversation history (cross-user privacy of chat context)

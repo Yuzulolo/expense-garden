@@ -10,8 +10,15 @@
 -- error with "relation does not exist" until migrations 0003-0007 are applied
 -- (expenses, incomes, savings, views, seal). Part 3's catalog queries run today.
 --
--- BEFORE RUNNING: replace <USER-A-UUID> and <USER-B-UUID> with two real user ids
+-- USER IDS ARE ALREADY SUBSTITUTED (verify against your project):
 --   select id, email from auth.users order by created_at;
+--   A (victim)   d5ccc7bf-3ced-48fb-9550-bfb2de3edf7f  xiangquyuanfang@hotmail.com
+--   B (attacker) a145738e-9f41-4757-832f-933018f28629  xiangquyuanfang@gmail.com
+--
+-- SEE ALSO: supabase/tests/rls_messages.sql — the same two-account test for
+-- public.messages (the AI conversation history), added in Sprint 3. It is a
+-- separate file because it seeds its own rows and so does not share this file's
+-- "substitute two ids into the finished schema" prerequisites.
 --
 -- -----------------------------------------------------------------------------
 -- WHY THERE ARE TWO VERSIONS OF THE SAME TEST
@@ -39,7 +46,7 @@
 
 begin;
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"<USER-B-UUID>","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"a145738e-9f41-4757-832f-933018f28629","role":"authenticated"}';
 
 select count(*) from public.expenses;                  -- must equal B's count only
 select * from public.v_category_month_totals;          -- must contain only B's user_id
@@ -47,11 +54,11 @@ select * from public.monthly_closes;                   -- only B's
 
 -- these must all FAIL:
 insert into public.expenses (user_id, category_slug, amount_cents, occurred_on)
-  values ('<USER-A-UUID>', 'social', 100, '2026-09-01');       -- WITH CHECK violation
+  values ('d5ccc7bf-3ced-48fb-9550-bfb2de3edf7f', 'social', 100, '2026-09-01');       -- WITH CHECK violation
 update public.monthly_closes set total_income_cents = 999999;   -- no policy / no privilege
 delete from public.monthly_closes;                              -- no policy / no privilege
 update public.savings_overrides set manual_net_cents = 1
-  where user_id = '<USER-A-UUID>';                              -- 0 rows affected
+  where user_id = 'd5ccc7bf-3ced-48fb-9550-bfb2de3edf7f';                              -- 0 rows affected
 rollback;
 
 
@@ -64,7 +71,7 @@ rollback;
 
 begin;
 set local role authenticated;
-set local request.jwt.claims = '{"sub":"<USER-B-UUID>","role":"authenticated"}';
+set local request.jwt.claims = '{"sub":"a145738e-9f41-4757-832f-933018f28629","role":"authenticated"}';
 -- SET LOCAL is set before the first savepoint, so it survives every rollback-to.
 
 -- Reads — B sees only B.
@@ -76,7 +83,7 @@ select * from public.monthly_closes;                   -- only B's
 --     new row violates row-level security policy for table "expenses"
 savepoint s2a;
 insert into public.expenses (user_id, category_slug, amount_cents, occurred_on)
-  values ('<USER-A-UUID>', 'social', 100, '2026-09-01');
+  values ('d5ccc7bf-3ced-48fb-9550-bfb2de3edf7f', 'social', 100, '2026-09-01');
 rollback to savepoint s2a;
 
 -- 2b. Rewriting a sealed month. Expect ERROR 42501:
@@ -98,7 +105,7 @@ rollback to savepoint s2c;
 --     the failure.
 savepoint s2d;
 update public.savings_overrides set manual_net_cents = 1
-  where user_id = '<USER-A-UUID>';
+  where user_id = 'd5ccc7bf-3ced-48fb-9550-bfb2de3edf7f';
 rollback to savepoint s2d;
 
 rollback;
