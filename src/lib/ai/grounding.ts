@@ -138,7 +138,9 @@ export async function buildChatMessages(
     supabase
       .from("messages")
       .select("role, content")
-      .order("created_at", { ascending: false })
+      // seq, not created_at: a pair shares its created_at, so created_at could
+      // hand the model an answer before the question it answered.
+      .order("seq", { ascending: false })
       .limit(HISTORY_TURNS),
   ]);
 

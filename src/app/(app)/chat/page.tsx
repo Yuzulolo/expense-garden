@@ -16,11 +16,16 @@ export default async function ChatPage() {
   // never has to round-trip back from the server to stay on screen.
   // Newest 200, not oldest 200: `ascending: true` with a limit would return the
   // start of a long conversation and hide everything recent. The index is
-  // (user_id, created_at desc), so this is also the ordering it serves directly.
+  // (user_id, seq desc), so this is also the ordering it serves directly.
+  //
+  // Ordered by seq, not created_at: both rows of a pair are written in one
+  // insert and share a created_at to the microsecond, so created_at leaves the
+  // order within a pair undefined and the grouping below can see an answer
+  // before its question. seq is monotonic per insert.
   const { data, error } = await supabase
     .from("messages")
     .select("id, role, content")
-    .order("created_at", { ascending: false })
+    .order("seq", { ascending: false })
     .limit(200);
 
   if (error) {

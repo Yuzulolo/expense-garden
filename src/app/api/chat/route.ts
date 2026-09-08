@@ -42,23 +42,49 @@ function json(body: unknown, status: number) {
   });
 }
 
+/**
+ * The hosts a browser may legitimately claim as its Origin.
+ *
+ * Not `x-forwarded-host` or `host`: those are request headers, so the caller
+ * supplies them, and comparing Origin against another value from the same
+ * caller proves nothing. `request.nextUrl.host` is built by Next from the
+ * server's own configured hostname — or, where `trustHostHeader` is on (as on
+ * Vercel), from `Host`, which fetch() forbids page scripts from setting — so it
+ * is not attacker-supplied either way.
+ *
+ * Behind a reverse proxy that rewrites the host, set `APP_ALLOWED_HOSTS` to the
+ * public host(s), comma-separated; it takes precedence when present.
+ */
+function allowedHosts(request: NextRequest): string[] {
+  const configured = (process.env.APP_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter((host) => host.length > 0);
+
+  return configured.length > 0
+    ? configured
+    : [request.nextUrl.host.toLowerCase()];
+}
+
 export async function POST(request: NextRequest) {
   // A Server Action gets an Origin/Host check from the framework. This does not,
   // so it checks for itself: without this, any site could POST here on a
   // signed-in user's behalf, spending their credits and writing to their history.
+  //
+  // Fail closed on a missing Origin too. A browser fetch() always sends Origin
+  // on a POST, so a request without one did not come from this app's UI, and
+  // skipping the check for it would leave the same hole open.
   const origin = request.headers.get("origin");
+  let originHost: string | null = null;
   if (origin) {
-    const host =
-      request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-    let originHost: string | null = null;
     try {
-      originHost = new URL(origin).host;
+      originHost = new URL(origin).host.toLowerCase();
     } catch {
       originHost = null;
     }
-    if (!host || originHost !== host) {
-      return json({ error: "Cross-origin request refused." }, 403);
-    }
+  }
+  if (!originHost || !allowedHosts(request).includes(originHost)) {
+    return json({ error: "Cross-origin request refused." }, 403);
   }
 
   const supabase = await createClient();
@@ -118,24 +144,35 @@ export async function POST(request: NextRequest) {
     // Read the body as text first — .json() throws on a non-JSON error page and
     // takes the body with it.
     const raw = await upstream.text().catch(() => "");
-    let message = `The AI service returned an error (${upstream.status}).`;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed?.error?.message) message = String(parsed.error.message);
-    } catch {
-      /* keep the status-based message */
-    }
-    return json({ error: message }, 502);
+    // Upstream text is for the server log only. It can name the provider, the
+    // routing decision, or the workspace guardrail — the guardrail's 404 body
+    // carries a `configure_url` — none of which belongs in a browser response.
+    console.error(
+      `[chat] OpenRouter responded ${upstream.status}: ${raw.slice(0, 500)}`,
+    );
+    return json(
+      {
+        error: `The AI service returned an error (${upstream.status}). Try again in a moment.`,
+      },
+      502,
+    );
   }
 
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
+
+  // Set by cancel() below. start() keeps running after a cancel, so without
+  // this the loop would fall through to the insert with a truncated answer.
+  let cancelled = false;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let buffer = "";
       let full = "";
       let failed: string | null = null;
+      // OpenRouter reports why generation stopped. "stop" is a finished reply;
+      // "length" means it hit max_tokens mid-sentence.
+      let finishReason: string | null = null;
 
       try {
         for (;;) {
@@ -160,10 +197,18 @@ export async function POST(request: NextRequest) {
             try {
               const chunk = JSON.parse(payload);
               if (chunk?.error) {
-                failed = String(chunk.error.message ?? "AI service error.");
+                // Logged, not forwarded — see the note on the non-2xx branch.
+                console.error(
+                  `[chat] OpenRouter mid-stream error: ${JSON.stringify(chunk.error).slice(0, 500)}`,
+                );
+                failed = "The AI service reported an error. Try again in a moment.";
                 break;
               }
-              const delta = chunk?.choices?.[0]?.delta?.content;
+              const choice = chunk?.choices?.[0];
+              if (typeof choice?.finish_reason === "string") {
+                finishReason = choice.finish_reason;
+              }
+              const delta = choice?.delta?.content;
               if (typeof delta === "string" && delta.length > 0) {
                 full += delta;
                 controller.enqueue(line({ t: "delta", v: delta }));
@@ -176,6 +221,24 @@ export async function POST(request: NextRequest) {
         }
       } catch {
         failed = "The response was interrupted.";
+      }
+
+      // The client went away mid-answer. Nothing is saved, by design: `messages`
+      // is append-only, so a half-answer could not be corrected or removed
+      // afterwards. Returning here also avoids enqueuing onto a cancelled
+      // controller, which throws.
+      if (cancelled) return;
+
+      // A reply that stopped at max_tokens is not an answer, it is the first
+      // 700 tokens of one — and in a financial answer the cut can land
+      // mid-figure. Treated exactly like the disconnect above: not saved, and
+      // reported as a failure rather than handed over as final. `messages` is
+      // append-only, so a half-answer written here could not be corrected.
+      if (!failed && finishReason !== null && finishReason !== "stop") {
+        failed =
+          finishReason === "length"
+            ? "That answer was too long to finish, so it was not saved. Try asking about a narrower period or category."
+            : "The answer stopped before it was finished, so it was not saved. Try again.";
       }
 
       if (failed || full.trim() === "") {
@@ -205,7 +268,9 @@ export async function POST(request: NextRequest) {
     },
 
     cancel() {
-      // Client navigated away mid-answer. Nothing is saved, by design.
+      // Client navigated away mid-answer. start() is still running; the flag is
+      // what stops it short of the insert.
+      cancelled = true;
       reader.cancel().catch(() => {});
     },
   });

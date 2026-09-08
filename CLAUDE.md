@@ -96,7 +96,7 @@ the write-up: Sonnet 5 was selected on the merits and is unavailable by policy,
 so chat runs on Haiku 4.5 with the show-your-figures rule as the mitigation.
 
 If the allowlist ever changes, `CHAT_MODEL` in
-`src/app/(app)/chat/actions.ts` carries a comment on how to switch back.
+`src/lib/ai/models.ts` carries a comment on how to switch back.
 Within the current allowlist, `google/gemini-2.5-flash` and `openai/gpt-5-mini`
 are the alternatives if Haiku's arithmetic proves weak.
 

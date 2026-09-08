@@ -68,9 +68,17 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublic(pathname)) {
     // API routes must answer with a status code, never a redirect: fetch()
     // follows a 307 transparently and hands the caller a /login HTML page with
-    // status 200, which then fails to parse as JSON. Each route handler does
-    // its own auth check and returns 401 itself.
-    if (pathname.startsWith("/api/")) return response;
+    // status 200, which then fails to parse as JSON.
+    //
+    // So answer 401 here rather than passing the request through. Passing
+    // through was the same fail-open default in a different shape: it made
+    // every route added under /api/ later reachable without a session unless
+    // that route remembered to check for itself. A public API route is opted in
+    // by adding it to PUBLIC_PATHS, not by omission. Route handlers still do
+    // their own check — this is a backstop, not the boundary (RLS is).
+    if (pathname.startsWith("/api/")) {
+      return jsonPreservingCookies(response, { error: "Not signed in." }, 401);
+    }
     return redirectPreservingCookies(request, response, "/login");
   }
 
@@ -79,6 +87,23 @@ export async function updateSession(request: NextRequest) {
   }
 
   return response;
+}
+
+/**
+ * Same cookie-preserving reasoning as the redirect below, for the JSON answer
+ * an unauthenticated API request gets instead.
+ */
+function jsonPreservingCookies(
+  from: NextResponse,
+  body: unknown,
+  status: number,
+) {
+  const json = NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "private, no-store" },
+  });
+  from.cookies.getAll().forEach((cookie) => json.cookies.set(cookie));
+  return json;
 }
 
 /**
