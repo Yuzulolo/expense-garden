@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("categories")
-      .select("slug, label, plant_key")
+      .select("slug, label, bubble_key")
       .eq("is_active", true)
       .order("sort_order"),
     supabase
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
     return {
       slug: c.slug as string,
       label: c.label as string,
-      plantKey: c.plant_key as string,
+      bubbleKey: c.bubble_key as string,
       totalCents: hit?.total ?? 0,
       entryCount: hit?.count ?? 0,
     };
@@ -85,11 +85,9 @@ export default async function DashboardPage() {
   const planted = plants.filter((p) => p.totalCents > 0).length;
 
   return (
-    <section className="flex flex-col gap-7">
-      {/* The bed is the hero — it is the most characteristic thing this app
-          has, so it is what you land on, not a summary panel above it. */}
-      <header className="flex flex-col gap-1.5">
-        <h1 className="font-display text-[2.125rem] leading-[1.1] font-semibold text-ink sm:text-[2.5rem]">
+    <section className="flex flex-col gap-10">
+      <header className="flex flex-col gap-2.5">
+        <h1 className="dashboard-title text-3xl leading-tight text-ink sm:text-4xl">
           {monthLabel(month)}
         </h1>
         <p className="max-w-[64ch] text-sm text-ink-soft">
@@ -108,16 +106,7 @@ export default async function DashboardPage() {
         </p>
       </header>
 
-      {plants.length === 0 ? (
-        <p className="text-sm text-ink-soft">
-          No active categories — check the categories table.
-        </p>
-      ) : (
-        <Garden plants={plants} />
-      )}
-
-      {/* Directly under the bed: you type here, the ground above responds. */}
-      <div className="border-t border-rule pt-6">
+      <div>
         <LogExpense
           action={logExpenseFromText}
           modelLabel={formatModelSlug(PARSE_MODEL)}
@@ -134,6 +123,14 @@ export default async function DashboardPage() {
           , where you can edit or delete one.
         </p>
       </div>
+
+      {plants.length === 0 ? (
+        <p className="text-sm text-ink-soft">
+          No active categories — check the categories table.
+        </p>
+      ) : (
+        <Garden plants={plants} />
+      )}
     </section>
   );
 }

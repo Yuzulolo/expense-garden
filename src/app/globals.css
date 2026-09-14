@@ -3,10 +3,15 @@
 /*
  * Expense Garden — visual tokens.
  *
- * The palette is the cool side of botany: a plant-press blotter ground, pine
- * ink, and soil brown used ONLY for soil. There is deliberately no single
- * brand accent — the six plant hues below are the palette, so the app's colour
- * comes from the user's own data.
+ * A pale lavender-glass shell: the page is a soft, almost white ground, the
+ * garden sits in a frosted-glass card, and the six category colours live
+ * INSIDE the pre-rendered vinyl sculptures rather than being painted onto
+ * flat shapes. The tokens below are what the surrounding UI uses; the
+ * sculptures' own colour is baked into the assets in /public/bubbles.
+ *
+ * The app renders light regardless of the visitor's OS setting: there is no
+ * prefers-color-scheme block, because the translucent sculptures are lit for
+ * a bright studio ground and read as muddy against a dark one.
  *
  * One semantic exception: water. The AI is what waters the garden, so the
  * water hue marks the AI surfaces (the sentence composer, chat answers) and
@@ -14,30 +19,38 @@
  */
 
 :root {
-  --bg: #eff2ec;
-  --air: #f5f7f2;
-  --surface: #fcfdfb;
-  --ink: #17251d;
-  --ink-soft: #47574d;
-  --ink-faint: #5e6d64;
-  --rule: #d3dbcf;
-  --rule-soft: #e3e9e0;
+  color-scheme: light;
+
+  --bg: #eaf0fa;
+  --air: #f3f6fe;
+  --surface: #f8faff;
+  /* Deep navy rather than black, a cool blue-grey for body copy, and a
+     quieter tint again for captions — sampled off the target. */
+  --ink: #1b3048;
+  --ink-soft: #61718f;
+  --ink-faint: #7281a0;
+  --rule: #d8dff2;
+  --rule-soft: #e6eafa;
 
   --soil: #6e5647;
   --soil-deep: #574235;
 
-  --water: #2f7a8c;
-  --water-ink: #256676;
-  --water-wash: #dceaee;
+  --water: #4a7f97;
+  --water-ink: #356a82;
+  --water-wash: #dde9f2;
 
-  --primary: #21402f;
-  --primary-hover: #2c5340;
-  --on-primary: #f4f8f4;
+  --primary: #39415c;
+  --primary-hover: #4a5375;
+  --on-primary: #f4f6fd;
 
-  --danger: #9b2c2c;
-  --ok: #2f6b45;
+  --danger: #a33a3a;
+  --ok: #3c7a5a;
 
-  /* Foliage and the bloom/fruit accent for each plant_key in categories. */
+  /* Accent per bubble_key in categories: the stage pips and the glow each
+     sculpture casts. Sampled from the renders themselves so the UI and the
+     art agree — see /public/bubbles. The vine/orchid/… tokens below are
+     untouched on purpose; the header logo still uses them (nav.tsx's
+     SproutMark). */
   --vine: #3e7a34;
   --vine-accent: #6fa83c;
   --orchid: #4e7a5e;
@@ -50,47 +63,34 @@
   --fern-accent: #4fa189;
   --succulent: #7e9c86;
   --succulent-accent: #c08ba8;
-}
+  --teal: #5fb8f0;
+  --teal-accent: #a8dcf8;
+  --magenta: #d97ccd;
+  --magenta-accent: #edb6e4;
+  --lime: #a6d173;
+  --lime-accent: #cbe6ab;
+  --crimson: #dcc39a;
+  --crimson-accent: #ecdcc4;
+  --jade: #84d3d0;
+  --jade-accent: #b8e7e5;
+  --lilac: #a79ae4;
+  --lilac-accent: #cfc7f2;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1512;
-    --air: #141b17;
-    --surface: #16201b;
-    --ink: #e7efe8;
-    --ink-soft: #9dafa3;
-    --ink-faint: #78877e;
-    --rule: #2a3830;
-    --rule-soft: #1f2a24;
+  /* The faint pastel light each sculpture spills onto the shelf. Far softer
+     than a drop-shadow — this is bounced light, not a coloured halo, so the
+     object reads as lit rather than as emitting. */
+  --teal-spill: rgba(95, 184, 240, 0.3);
+  --magenta-spill: rgba(196, 124, 217, 0.28);
+  --lime-spill: rgba(166, 209, 115, 0.28);
+  --crimson-spill: rgba(220, 180, 130, 0.26);
+  --jade-spill: rgba(132, 211, 208, 0.28);
+  --lilac-spill: rgba(167, 154, 228, 0.28);
 
-    --soil: #4a3a2f;
-    --soil-deep: #362a22;
-
-    --water: #5fb4c6;
-    --water-ink: #7cc6d6;
-    --water-wash: #16323a;
-
-    --primary: #2f6b4c;
-    --primary-hover: #3b8460;
-    --on-primary: #f0f7f1;
-
-    --danger: #f08a8a;
-    --ok: #7fc79c;
-
-    /* Foliage lifts a little at night so plants stay luminous on the dark bed. */
-    --vine: #57a247;
-    --vine-accent: #8ac653;
-    --orchid: #639773;
-    --orchid-accent: #d95a9e;
-    --bamboo: #9cc043;
-    --bamboo-accent: #c1d968;
-    --tomato: #46914f;
-    --tomato-accent: #e35a43;
-    --fern: #3d9680;
-    --fern-accent: #6cc0a7;
-    --succulent: #9ab8a2;
-    --succulent-accent: #d7a3bd;
-  }
+  /* The shelf is barely there: in the target it is roughly ten levels below
+     the card, not a filled rectangle. Kept translucent so the page's own
+     atmosphere passes through it. */
+  --chamber-tint: rgba(176, 192, 230, 0.06);
+  --chamber-tint-deep: rgba(173, 184, 222, 0.12);
 }
 
 @theme inline {
@@ -118,7 +118,9 @@
 }
 
 body {
+  isolation: isolate;
   background: var(--bg);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
   font-size: 0.9375rem;
@@ -152,10 +154,9 @@ body {
 }
 
 /* ---- The watering moment -------------------------------------------------
- * The one place this app animates without being asked mid-gesture: an expense
- * has just landed, and the plant it belongs to is watered. Everything here is
- * triggered by a change in the totals the server sent, and all of it is
- * suppressed under prefers-reduced-motion.
+ * Triggered by a change in the totals the server sent, suppressed under
+ * prefers-reduced-motion — same as before, the drop still falls, it just
+ * lands on a bubble now instead of soaking into soil.
  */
 
 @keyframes drop-fall {
@@ -175,69 +176,84 @@ body {
   }
 }
 
-/* Rooted at the soil line, so the plant pushes UP out of the ground. */
-@keyframes grow-spring {
+/* A bubble absorbing a drop: a quick squash/stretch, centered on itself
+   rather than a soil line, since nothing is rooted anymore. */
+/* A sculpture absorbing a drop: a quick squash/stretch, centred on itself. */
+@keyframes sculpture-pulse {
   0% {
-    transform: scaleY(0.9) scaleX(1.03);
+    transform: scale(0.94);
   }
-  45% {
-    transform: scaleY(1.055) scaleX(0.985);
-  }
-  75% {
-    transform: scaleY(0.985) scaleX(1.005);
-  }
-  100% {
-    transform: scaleY(1) scaleX(1);
-  }
-}
-
-@keyframes soil-soak {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  25% {
-    opacity: 0.85;
-  }
-}
-
-/* A newly earned leaf, bloom or fruit arrives instead of popping into place. */
-@keyframes unfurl {
-  0% {
-    transform: scale(0.2) rotate(-8deg);
-    opacity: 0;
+  40% {
+    transform: scale(1.08);
   }
   70% {
-    transform: scale(1.06) rotate(1deg);
-    opacity: 1;
+    transform: scale(0.98);
   }
   100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Idle motion: every sculpture drifts on its own phase (set per-item via
+   --float-dur/--float-delay/--float-dx/--float-rot), so the row never looks
+   synchronized. Deliberately small — these read as physical objects resting
+   on a surface, and a big drift would undo that. */
+@keyframes sculpture-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
   }
 }
 
 .drop {
   animation: drop-fall 900ms cubic-bezier(0.45, 0, 0.7, 1) forwards;
 }
-.watered-plant {
-  animation: grow-spring 1100ms cubic-bezier(0.34, 1.56, 0.64, 1) 120ms both;
-  transform-origin: 50% 100%;
+
+/* A square box the render is letterboxed into, so both dimensions are
+   clamped together and the aspect ratio can never be squashed. */
+.sculpture-box {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  height: 100%;
 }
-.soil-soak {
-  animation: soil-soak 1500ms ease-out forwards;
+
+.sculpture-float {
+  display: block;
+  animation: sculpture-float var(--float-dur, 4s) ease-in-out infinite;
+  animation-delay: var(--float-delay, 0s);
 }
-.unfurl {
-  animation: unfurl 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
+
+.sculpture-pulse {
+  animation: sculpture-pulse 620ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: 50% 60%;
+}
+
+/* Physical shadows only — no coloured bloom. Three neutral layers: a tight
+   ambient-occlusion contact shadow right under the object, a directional cast
+   shadow offset down-right for the upper-left key light, and a wide soft
+   falloff. A tinted outer glow would read as the object emitting light, which
+   is the opposite of a clear refractive material sitting on a surface. */
+/* Three layers, in the order the eye reads them: a tight neutral contact
+   shadow that anchors the object, a wide soft neutral throw down-right for the
+   upper-left key, and a very diffuse spill of the object's OWN colour bounced
+   onto the shelf. The third is deliberately much weaker than a drop-shadow —
+   it is reflected light, not a glow, and at this strength it reads as the
+   object being lit rather than emitting. */
+.sculpture-fx {
+  filter: drop-shadow(0 2px 2px rgba(50, 60, 95, 0.12))
+    drop-shadow(4px 10px 12px rgba(50, 60, 95, 0.08))
+    drop-shadow(1px 8px 16px var(--bubble-spill, transparent));
 }
 
 @media (prefers-reduced-motion: reduce) {
   .drop,
-  .watered-plant,
-  .soil-soak,
-  .unfurl {
+  .sculpture-pulse,
+  .sculpture-float {
     animation: none !important;
   }
   *,
@@ -247,32 +263,240 @@ body {
   }
 }
 
-/* ---- The bed -------------------------------------------------------------
- * The soil is painted as one continuous band behind the whole plant row rather
- * than as a slice per column: six adjacent slices show subpixel seams at most
- * flex widths, and the bed has to read as one piece of ground.
- * The stops match the plant-area and soil heights in garden.tsx.
+/* ---- The garden card -------------------------------------------------------
+ * One cohesive translucent object, not a white panel with a blue box inside
+ * it. The page's own lavender/blue atmosphere passes through the glass, so
+ * the card never reads as opaque and its edge stays almost invisible.
+ * Deliberately doesn't reach for --water here — that hue stays reserved for
+ * AI surfaces and the watering moment, per the rule at the top of this file.
  */
-.bed-soil {
+.garden-card {
+  border-radius: 32px;
   background: linear-gradient(
     to bottom,
-    transparent 0 186px,
-    var(--soil-deep) 186px 189px,
-    var(--soil) 189px 206px,
-    var(--soil-deep) 222px,
-    transparent 222px
+    rgba(255, 255, 255, 0.24),
+    rgba(248, 250, 255, 0.16) 46%,
+    rgba(241, 244, 255, 0.22)
   );
+  backdrop-filter: blur(26px) saturate(1.3);
+  -webkit-backdrop-filter: blur(26px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  box-shadow:
+    0 32px 80px -32px rgba(97, 111, 163, 0.18),
+    0 8px 28px -16px rgba(85, 95, 145, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
-@media (min-width: 640px) {
-  .bed-soil {
-    background: linear-gradient(
-      to bottom,
-      transparent 0 236px,
-      var(--soil-deep) 236px 240px,
-      var(--soil) 240px 262px,
-      var(--soil-deep) 284px,
-      transparent 284px
-    );
+/* The shelf the sculptures rest on. In the target this is barely a surface at
+   all — a hint of icy blue with a lavender undertone, fading IN from nothing
+   over the first stretch so the boundary with the figures above reads as
+   atmosphere rather than as a horizontal rule. */
+.chamber-band {
+  background: linear-gradient(
+    to bottom,
+    rgba(150, 172, 220, 0) 0%,
+    var(--chamber-tint) 45%,
+    var(--chamber-tint-deep) 100%
+  );
+  border-radius: 0 0 30px 30px;
+}
+
+/* The dashed slot for a category with nothing spent yet. */
+.empty-slot {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--ink-faint);
+  color: var(--ink-faint);
+  opacity: 0.65;
+}
+
+/* ---- Page atmosphere -------------------------------------------------------
+ * The big out-of-focus lavender forms that bleed in at the page corners in
+ * the design. Purely decorative and pointer-transparent, painted on a fixed
+ * layer so they don't move with content or add scroll width.
+ */
+/* Layered radial washes rather than one flat fill: a luminous near-white core
+   behind the content, pale icy blue through the middle-left, and lavender
+   gathering at the right and the corners. No stop is strong enough to show a
+   boundary — the point is fog, not a gradient. */
+.page-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      46rem 32rem at 32% 24%,
+      rgba(255, 255, 255, 0.48),
+      rgba(255, 255, 255, 0) 66%
+    ),
+    radial-gradient(
+      44rem 34rem at 6% 56%,
+      rgba(219, 236, 252, 0.5),
+      rgba(219, 236, 252, 0) 70%
+    ),
+    radial-gradient(
+      34rem 28rem at 106% -4%,
+      rgba(194, 199, 246, 0.65),
+      rgba(198, 202, 246, 0) 68%
+    ),
+    radial-gradient(
+      34rem 30rem at 106% 102%,
+      rgba(204, 183, 242, 0.65),
+      rgba(196, 184, 238, 0) 66%
+    ),
+    radial-gradient(
+      30rem 24rem at 94% 44%,
+      rgba(255, 255, 255, 0.2),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    radial-gradient(
+      36rem 30rem at -4% 106%,
+      rgba(214, 220, 246, 0.5),
+      rgba(214, 220, 246, 0) 68%
+    ),
+    linear-gradient(155deg, #edf2fb 0%, #e5edf9 48%, #e7e5f6 100%);
+}
+
+/* Two of our own sculptures, scaled far up, thrown out of focus and pushed
+   past the viewport edge — the out-of-focus foreground/background forms in the
+   target. Reusing the real asset (rather than drawing blurred circles) is what
+   keeps them reading as 3D objects that happen to be out of focus. */
+.page-sculptures {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.page-sculptures::before,
+.page-sculptures::after {
+  content: "";
+  position: absolute;
+  background: url("/bubbles/lilac.webp") center / contain no-repeat;
+}
+
+.page-sculptures::before {
+  top: -19vh;
+  right: 8vw;
+  width: clamp(240px, 29vw, 560px);
+  height: clamp(240px, 29vw, 560px);
+  opacity: 0.44;
+  filter: blur(12px) saturate(0.8);
+  transform: rotate(-14deg);
+}
+
+.page-sculptures::after {
+  bottom: -22vh;
+  right: -9vw;
+  width: clamp(280px, 33vw, 640px);
+  height: clamp(280px, 33vw, 640px);
+  opacity: 0.46;
+  filter: blur(15px) saturate(0.85);
+  transform: rotate(22deg);
+}
+
+/* ---- Navigation ------------------------------------------------------------
+ * Part of the same glass system: no opaque bar, no hard rule under it, just a
+ * faint translucent wash and a hairline that reads as a change in the light.
+ */
+.app-nav {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.18)
+  );
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.nav-button {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: var(--ink-soft);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.nav-button:hover {
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--ink);
+}
+
+/* Local ground lighting stays centered on the existing category axis. */
+.sculpture-ground {
+  position: absolute;
+  pointer-events: none;
+  bottom: 23px;
+  left: 50%;
+  width: 64%;
+  max-width: 124px;
+  height: 40px;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(255, 255, 255, 0.65), transparent 38%),
+    radial-gradient(ellipse, var(--bubble-spill) 12%, transparent 72%);
+  filter: blur(7px);
+}
+
+.sculpture-ground::after {
+  content: "";
+  position: absolute;
+  inset: 8px 23% 10px;
+  border-radius: 50%;
+  background: rgba(49, 62, 99, 0.16);
+  filter: blur(3px);
+}
+
+.garden-progress-dot {
+  background: color-mix(in srgb, var(--dot-fill) 18%, #dce2ef);
+  box-shadow: none;
+}
+
+.garden-progress-dot[data-active="true"] {
+  background: var(--dot-fill);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.65),
+    0 1px 3px color-mix(in srgb, var(--dot-fill) 35%, transparent);
+}
+
+.dashboard-composer {
+  position: relative;
+}
+
+.dashboard-composer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(151, 166, 201, 0.24), transparent);
+}
+
+/* The reference uses clean sans-serif figures and a generous, quiet title. */
+.dashboard-title {
+  font-family: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.sculpture-box img {
+  filter: brightness(1.045) saturate(0.92);
+}
+
+@media (max-width: 640px) {
+  .page-sculptures::before {
+    right: -24vw;
+    opacity: 0.3;
+  }
+  .page-sculptures::after {
+    opacity: 0.3;
   }
 }
