@@ -32,7 +32,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${fraunces.variable} ${instrumentSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-bg text-ink">{children}</body>
+      <body className="min-h-full flex flex-col bg-bg text-ink">
+        {/* Decorative out-of-focus forms bleeding in at the page edges — see
+            .page-atmosphere in globals.css. Fixed and pointer-transparent, so
+            it never affects layout or scroll width. */}
+        <div aria-hidden="true" className="page-atmosphere" />
+        <div aria-hidden="true" className="page-sculptures" />
+        {children}
+      </body>
     </html>
   );
 }

@@ -19,8 +19,8 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="border-b border-rule">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
+      <header className="app-nav sticky top-0 z-10">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4 sm:px-10">
           <Link
             href="/dashboard"
             className="flex items-center gap-2 rounded-sm text-[1.0625rem] text-ink"
@@ -41,7 +41,7 @@ export default async function AppLayout({
             <form action={logOut}>
               <button
                 type="submit"
-                className="rounded-md border border-rule px-2.5 py-1 text-xs text-ink-soft transition-colors hover:border-ink-faint hover:text-ink"
+                className="nav-button px-3 py-1.5 text-xs"
               >
                 Log out
               </button>
@@ -50,7 +50,7 @@ export default async function AppLayout({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-12 sm:px-10 sm:py-16">
         {children}
       </main>
     </div>
