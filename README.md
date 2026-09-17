@@ -15,7 +15,14 @@ auth, RLS on every user table, no `service_role` key anywhere in the project.
 
 **Screenshot:**
 
-![Expense Garden — natural-language expense entry and grounded chat](docs/screenshot.png)
+![The Garden page: a "What did you spend?" box taking the sentence "spent 12 on coffee with Sam", the six category totals for September 2026, and a bubble per category sized by how much went into it](docs/screenshot.png)
+
+The Garden page is the whole input surface. You type a sentence into **What did you spend?**
+— `spent 12 on coffee with Sam`, `65 climbing pass yesterday`, `24.99 haircut` — and Claude
+Haiku 4.5 pulls the amount, category and date out of it and writes one row. Underneath, the
+current month is shown as six totals and six bubbles, one per category, each sized by what
+you have spent in it; the bed empties when the month turns. **Ask** is the chat page, which
+answers questions about these same figures. The account email is blanked out in the shot.
 
 > **Where the deployed code lives.** Vercel's GitHub App has to be approved on a repository
 > owned by the account connecting it, so the live deployment is built from a personal repo,
